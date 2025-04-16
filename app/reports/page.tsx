@@ -49,7 +49,7 @@ import {
   ImageAnalysisResult,
   getSafetyTips,
   SafetyTip,
-} from "@/app/services/aiImageAnalysis";
+} from "../services/aiImageAnalysis";
 
 // Define badge types and requirements
 const BADGES = [

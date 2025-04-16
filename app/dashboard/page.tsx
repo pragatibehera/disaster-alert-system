@@ -16,6 +16,10 @@ import {
   Clock,
   Zap,
   BarChart3,
+  Trophy,
+  Award,
+  Star,
+  Navigation,
 } from "lucide-react";
 import {
   motion,
@@ -34,10 +38,24 @@ import { Label } from "@/components/ui/label";
 import { LocationModal } from "@/components/location-modal";
 import { DisasterMap } from "@/components/disaster-map";
 import { SafetyTipsPanel } from "@/components/safety-tips-panel";
+import { ARSafetyNavigator } from "@/components/ar-safety-navigator";
 import { AlertCard } from "@/components/alert-card";
 import { StatCard } from "@/components/stat-card";
 import { AnimatedCard } from "@/components/animated-card";
 import { mockAlerts } from "@/lib/mock-data";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+
+// Define the Alert interface based on the mockAlerts structure
+interface Alert {
+  id: string;
+  type: string;
+  location: string;
+  coordinates: { lat: number; lng: number };
+  severity: string;
+  timestamp: string;
+  description: string;
+  distance: number;
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -48,9 +66,17 @@ export default function Dashboard() {
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [showSafetyTips, setShowSafetyTips] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [showARNavigator, setShowARNavigator] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [userProfile, setUserProfile] = useState({
+    points: 0,
+    totalReports: 0,
+    verifiedReports: 0,
+    disasterTypes: new Set(),
+    badges: [] as string[],
+  });
 
   useEffect(() => {
     // Check if location is stored in localStorage
@@ -59,6 +85,21 @@ export default function Dashboard() {
       setLocation(storedLocation);
     } else {
       setShowLocationModal(true);
+    }
+
+    // Load user profile from local storage
+    const savedProfile = localStorage.getItem("disasterAlertUserProfile");
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        // Convert the disasterTypes array back to a Set if it exists
+        if (parsed.disasterTypes) {
+          parsed.disasterTypes = new Set(parsed.disasterTypes);
+        }
+        setUserProfile(parsed);
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+      }
     }
 
     // Set up auto-refresh if enabled
@@ -91,7 +132,7 @@ export default function Dashboard() {
     refreshAlerts();
   };
 
-  const handleAlertClick = (alert: any) => {
+  const handleAlertClick = (alert: Alert) => {
     setSelectedAlert(alert);
     setShowSafetyTips(true);
   };
@@ -144,6 +185,56 @@ export default function Dashboard() {
     },
   ];
 
+  // Define the badge info for display
+  const BADGES = [
+    {
+      id: "first_report",
+      name: "First Responder",
+      description: "Submit your first disaster report",
+      icon: Shield,
+      color: "bg-blue-100 text-blue-600",
+      requirement: 1,
+    },
+    {
+      id: "five_reports",
+      name: "Community Guardian",
+      description: "Submit 5 disaster reports",
+      icon: Award,
+      color: "bg-green-100 text-green-600",
+      requirement: 5,
+    },
+    {
+      id: "ten_reports",
+      name: "Safety Sentinel",
+      description: "Submit 10 disaster reports",
+      icon: Trophy,
+      color: "bg-amber-100 text-amber-600",
+      requirement: 10,
+    },
+    {
+      id: "verified_reporter",
+      name: "Verified Reporter",
+      description: "Get 3 reports verified by authorities",
+      icon: Star,
+      color: "bg-purple-100 text-purple-600",
+      requirement: 3,
+    },
+  ];
+
+  // Get user badges for display
+  const userBadges = BADGES.filter((badge) =>
+    userProfile.badges.includes(badge.id)
+  );
+
+  // Add function to open AR Navigator directly
+  const openARNavigator = () => {
+    // If no alert is selected, use the first alert in the list
+    if (!selectedAlert && alerts.length > 0) {
+      setSelectedAlert(alerts[0] as Alert);
+    }
+    setShowARNavigator(true);
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       {/* Header */}
@@ -167,6 +258,12 @@ export default function Dashboard() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="flex items-center space-x-4"
           >
+            <div className="flex items-center gap-2 mr-4 rounded-full bg-amber-100 px-3 py-1.5">
+              <Trophy className="h-4 w-4 text-amber-600" />
+              <span className="font-medium text-amber-800">
+                {userProfile.points} points
+              </span>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -174,6 +271,15 @@ export default function Dashboard() {
             >
               <Upload className="mr-2 h-4 w-4" />
               Report
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/ar-navigator")}
+              className="bg-black text-white hover:bg-black/80 border-black"
+            >
+              <Navigation className="mr-2 h-4 w-4" />
+              AR Nav
             </Button>
             <Button
               variant="outline"
@@ -277,6 +383,127 @@ export default function Dashboard() {
               />
             ))}
           </div>
+
+          {/* User Points & Achievements Card - NEW */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mb-6"
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <Trophy className="mr-2 h-5 w-5 text-amber-500" />
+                  Your Disaster Response Profile
+                </CardTitle>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openARNavigator}
+                    className="bg-red-600 hover:bg-red-700 text-white border-0"
+                  >
+                    <Navigation className="mr-2 h-4 w-4" />
+                    AR Navigation
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push("/reports")}
+                  >
+                    Submit Report
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-3">
+                  {/* Points Card */}
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                        <Trophy className="h-8 w-8 text-amber-600" />
+                      </div>
+                      <h3 className="text-3xl font-bold text-amber-600">
+                        {userProfile.points}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Total Points Earned
+                      </p>
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push("/reports")}
+                          className="text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100"
+                        >
+                          View Rewards
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reports Status */}
+                  <div className="rounded-lg border bg-card p-4">
+                    <h3 className="mb-2 font-medium">Your Contributions</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Total Reports</span>
+                        <Badge variant="outline" className="bg-blue-50">
+                          {userProfile.totalReports}
+                        </Badge>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Verified Reports</span>
+                        <Badge variant="outline" className="bg-green-50">
+                          {userProfile.verifiedReports}
+                        </Badge>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Disaster Types Reported</span>
+                        <Badge variant="outline" className="bg-purple-50">
+                          {userProfile.disasterTypes.size}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="rounded-lg border bg-card p-4">
+                    <h3 className="mb-2 font-medium">
+                      Badges Earned ({userProfile.badges.length})
+                    </h3>
+                    {userBadges.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {userBadges.map((badge) => (
+                          <div
+                            key={badge.id}
+                            className={`flex items-center p-1.5 rounded-lg ${badge.color}`}
+                          >
+                            <div className="mr-2 rounded-full p-1 bg-white/30">
+                              <badge.icon className="h-3 w-3" />
+                            </div>
+                            <span className="text-xs font-medium">
+                              {badge.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-center h-24">
+                        <Award className="h-8 w-8 text-slate-300 mb-2" />
+                        <p className="text-xs text-muted-foreground">
+                          Submit reports to earn badges
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Dashboard Content */}
           <div className="grid gap-6 md:grid-cols-3">
@@ -517,6 +744,25 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Add AR Navigator Sheet */}
+      {showARNavigator && selectedAlert && (
+        <Sheet
+          open={showARNavigator}
+          onOpenChange={() => setShowARNavigator(false)}
+        >
+          <SheetContent className="w-full sm:max-w-md p-0">
+            <ARSafetyNavigator
+              disaster={{
+                type: selectedAlert.type,
+                location: selectedAlert.location,
+                severity: selectedAlert.severity,
+              }}
+              onClose={() => setShowARNavigator(false)}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Location Modal */}
       {showLocationModal && (
