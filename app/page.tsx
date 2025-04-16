@@ -32,7 +32,7 @@ export default function Home() {
           >
             <Shield className="h-6 w-6 text-red-500" />
             <span className="hidden font-bold sm:inline-block">
-              DisasterAlert
+              Sentinel Flow
             </span>
           </motion.div>
           <nav className="flex flex-1 items-center justify-end space-x-4">
@@ -117,7 +117,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.7 }}
           >
-            Real-Time Disaster Alerts
+            Sentinel Flow
           </motion.h1>
 
           <motion.p
@@ -126,9 +126,9 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.9 }}
           >
-            Get AI-powered alerts during natural disasters to stay safe. Receive
-            location-specific warnings, safety tips, and emergency information
-            when every second counts.
+            SentinelFlow is a real-time AI disaster alert system that turns
+            devices into sensors, forming a decentralized network for rapid
+            emergency detection and response.
           </motion.p>
 
           <motion.div
