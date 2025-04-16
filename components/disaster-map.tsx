@@ -1,17 +1,9 @@
 "use client";
 
 import React from "react";
-import dynamic from "next/dynamic";
-
-// Dynamically import the MapboxDisasterMap component with no SSR
-const MapboxDisasterMap = dynamic(() => import("./MapboxDisasterMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center w-full h-full bg-gray-100 rounded-lg">
-      <div className="text-gray-500">Loading disaster map...</div>
-    </div>
-  ),
-});
+import Link from "next/link";
+import { MapIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface DisasterMapProps {
   height?: string | number;
@@ -42,16 +34,19 @@ export function DisasterMap({
   alerts = [],
 }: DisasterMapProps) {
   return (
-    <div className="disaster-map-container rounded-lg overflow-hidden shadow-lg">
-      <MapboxDisasterMap
-        height={height}
-        width={width}
-        center={center}
-        zoom={zoom}
-        pitch={pitch}
-        bearing={bearing}
-        alerts={alerts}
-      />
+    <div
+      className="disaster-map-container rounded-lg overflow-hidden shadow-lg bg-slate-100 flex flex-col items-center justify-center text-center p-8"
+      style={{ height, width }}
+    >
+      <MapIcon className="h-16 w-16 text-slate-400 mb-4" />
+      <h3 className="text-xl font-semibold mb-2">View Disaster Map</h3>
+      <p className="text-slate-500 max-w-md mb-6">
+        Click below to view an interactive 3D map displaying real-time disaster
+        events across India, including fires, cyclones, earthquakes, and floods.
+      </p>
+      <Button asChild className="bg-red-600 hover:bg-red-700">
+        <Link href="/map">Open Full Map</Link>
+      </Button>
     </div>
   );
 }
