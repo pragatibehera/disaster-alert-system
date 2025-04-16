@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Bell,
@@ -16,88 +16,93 @@ import {
   Clock,
   Zap,
   BarChart3,
-} from "lucide-react"
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { LocationModal } from "@/components/location-modal"
-import { DisasterMap } from "@/components/disaster-map"
-import { SafetyTipsPanel } from "@/components/safety-tips-panel"
-import { AlertCard } from "@/components/alert-card"
-import { StatCard } from "@/components/stat-card"
-import { AnimatedCard } from "@/components/animated-card"
-import { mockAlerts } from "@/lib/mock-data"
+} from "lucide-react";
+import {
+  motion,
+  AnimatePresence,
+  useScroll,
+  useTransform,
+} from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { LocationModal } from "@/components/location-modal";
+import { DisasterMap } from "@/components/disaster-map";
+import { SafetyTipsPanel } from "@/components/safety-tips-panel";
+import { AlertCard } from "@/components/alert-card";
+import { StatCard } from "@/components/stat-card";
+import { AnimatedCard } from "@/components/animated-card";
+import { mockAlerts } from "@/lib/mock-data";
 
 export default function Dashboard() {
-  const router = useRouter()
-  const { scrollY } = useScroll()
-  const headerOpacity = useTransform(scrollY, [0, 100], [1, 0.8])
-  const [alerts, setAlerts] = useState(mockAlerts)
-  const [showLocationModal, setShowLocationModal] = useState(false)
-  const [location, setLocation] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [showSafetyTips, setShowSafetyTips] = useState(false)
-  const [selectedAlert, setSelectedAlert] = useState(null)
-  const [autoRefresh, setAutoRefresh] = useState(false)
-  const [activeTab, setActiveTab] = useState("all")
+  const router = useRouter();
+  const { scrollY } = useScroll();
+  const headerOpacity = useTransform(scrollY, [0, 100], [1, 0.8]);
+  const [alerts, setAlerts] = useState(mockAlerts);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [location, setLocation] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showSafetyTips, setShowSafetyTips] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
     // Check if location is stored in localStorage
-    const storedLocation = localStorage.getItem("userLocation")
+    const storedLocation = localStorage.getItem("userLocation");
     if (storedLocation) {
-      setLocation(storedLocation)
+      setLocation(storedLocation);
     } else {
-      setShowLocationModal(true)
+      setShowLocationModal(true);
     }
 
     // Set up auto-refresh if enabled
-    let interval
+    let interval: string | number | NodeJS.Timeout | undefined;
     if (autoRefresh) {
       interval = setInterval(() => {
-        refreshAlerts()
-      }, 30000) // Refresh every 30 seconds
+        refreshAlerts();
+      }, 30000); // Refresh every 30 seconds
     }
 
     return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [autoRefresh])
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefresh]);
 
   const refreshAlerts = () => {
-    setLoading(true)
+    setLoading(true);
     // Simulate API call with timeout
     setTimeout(() => {
       // Randomize the order of alerts to simulate updates
-      setAlerts([...mockAlerts].sort(() => Math.random() - 0.5))
-      setLoading(false)
-    }, 1000)
-  }
+      setAlerts([...mockAlerts].sort(() => Math.random() - 0.5));
+      setLoading(false);
+    }, 1000);
+  };
 
-  const handleLocationSet = (loc) => {
-    setLocation(loc)
-    localStorage.setItem("userLocation", loc)
-    setShowLocationModal(false)
-    refreshAlerts()
-  }
+  const handleLocationSet = (loc: string) => {
+    setLocation(loc);
+    localStorage.setItem("userLocation", loc);
+    setShowLocationModal(false);
+    refreshAlerts();
+  };
 
-  const handleAlertClick = (alert) => {
-    setSelectedAlert(alert)
-    setShowSafetyTips(true)
-  }
+  const handleAlertClick = (alert: any) => {
+    setSelectedAlert(alert);
+    setShowSafetyTips(true);
+  };
 
   // Filter alerts based on active tab
   const filteredAlerts = alerts.filter((alert) => {
-    if (activeTab === "all") return true
-    if (activeTab === "severe") return alert.severity === "high"
-    if (activeTab === "nearby") return alert.distance < 50
-    return true
-  })
+    if (activeTab === "all") return true;
+    if (activeTab === "severe") return alert.severity === "high";
+    if (activeTab === "nearby") return alert.distance < 50;
+    return true;
+  });
 
   // Stats for the dashboard
   const stats = [
@@ -105,7 +110,7 @@ export default function Dashboard() {
       title: "Active Alerts",
       value: alerts.length,
       icon: Bell,
-      trend: "up",
+      trend: "up" as "up",
       trendValue: "+3 since yesterday",
       iconColor: "text-red-500",
       iconBgColor: "bg-red-100",
@@ -114,7 +119,7 @@ export default function Dashboard() {
       title: "People Notified",
       value: "12,845",
       icon: Users,
-      trend: "up",
+      trend: "up" as "up",
       trendValue: "+2.3%",
       iconColor: "text-blue-500",
       iconBgColor: "bg-blue-100",
@@ -123,7 +128,7 @@ export default function Dashboard() {
       title: "Response Time",
       value: "4.2 min",
       icon: Clock,
-      trend: "down",
+      trend: "down" as "down",
       trendValue: "-0.5 min",
       iconColor: "text-green-500",
       iconBgColor: "bg-green-100",
@@ -132,10 +137,12 @@ export default function Dashboard() {
       title: "System Status",
       value: "Operational",
       icon: Zap,
+      trend: "neutral" as "neutral",
+      trendValue: "",
       iconColor: "text-amber-500",
       iconBgColor: "bg-amber-100",
     },
-  ]
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -160,15 +167,27 @@ export default function Dashboard() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="flex items-center space-x-4"
           >
-            <Button variant="outline" size="sm" onClick={() => router.push("/reports")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/reports")}
+            >
               <Upload className="mr-2 h-4 w-4" />
               Report
             </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push("/subscribe")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/subscribe")}
+            >
               <Smartphone className="mr-2 h-4 w-4" />
               SMS Alerts
             </Button>
-            <Button variant="default" size="sm" className="bg-red-600 hover:bg-red-700">
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-red-600 hover:bg-red-700"
+            >
               <Bell className="mr-2 h-4 w-4" />
               My Alerts
             </Button>
@@ -192,10 +211,19 @@ export default function Dashboard() {
                   <MapPin className="h-5 w-5 text-red-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Location</p>
-                  <p className="font-medium">{location ? location : "No location set"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Current Location
+                  </p>
+                  <p className="font-medium">
+                    {location ? location : "No location set"}
+                  </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowLocationModal(true)} className="ml-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLocationModal(true)}
+                  className="ml-2"
+                >
                   Change
                 </Button>
               </div>
@@ -207,7 +235,9 @@ export default function Dashboard() {
                   disabled={loading}
                   className="relative overflow-hidden"
                 >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                  />
                   Refresh
                   {loading && (
                     <motion.div
@@ -259,7 +289,9 @@ export default function Dashboard() {
             >
               <Card className="overflow-hidden">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl font-bold">Disaster Map</CardTitle>
+                  <CardTitle className="text-xl font-bold">
+                    Disaster Map
+                  </CardTitle>
                   <div className="flex items-center gap-2">
                     <div className="flex h-6 items-center rounded-full bg-slate-100 px-2 text-xs font-medium">
                       <span className="mr-1 h-2 w-2 rounded-full bg-green-500"></span>
@@ -279,7 +311,9 @@ export default function Dashboard() {
               {/* Activity Timeline */}
               <AnimatedCard delay={0.4} className="mt-6">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl font-bold">Recent Activity</CardTitle>
+                  <CardTitle className="text-xl font-bold">
+                    Recent Activity
+                  </CardTitle>
                   <Badge variant="outline" className="ml-2">
                     Last 24 hours
                   </Badge>
@@ -287,14 +321,21 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="space-y-4">
                     {[...alerts]
-                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                      .sort(
+                        (a, b) =>
+                          new Date(b.timestamp).getTime() -
+                          new Date(a.timestamp).getTime()
+                      )
                       .slice(0, 3)
                       .map((alert, index) => (
                         <motion.div
                           key={alert.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                          transition={{
+                            duration: 0.5,
+                            delay: 0.5 + index * 0.1,
+                          }}
                           className="flex items-start gap-3"
                         >
                           <div
@@ -302,8 +343,8 @@ export default function Dashboard() {
                               alert.severity === "high"
                                 ? "bg-red-500"
                                 : alert.severity === "medium"
-                                  ? "bg-amber-500"
-                                  : "bg-green-500"
+                                ? "bg-amber-500"
+                                : "bg-green-500"
                             }`}
                           ></div>
                           <div className="flex-1">
@@ -311,10 +352,16 @@ export default function Dashboard() {
                               New {alert.type} alert in {alert.location}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(alert.timestamp).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                              {(() => {
+                                const date = new Date(alert.timestamp);
+                                const hours = date.getHours();
+                                const minutes = date.getMinutes();
+                                const ampm = hours >= 12 ? "PM" : "AM";
+                                const formattedHours = hours % 12 || 12;
+                                const formattedMinutes =
+                                  minutes < 10 ? `0${minutes}` : minutes;
+                                return `${formattedHours}:${formattedMinutes} ${ampm}`;
+                              })()}
                             </p>
                           </div>
                         </motion.div>
@@ -328,7 +375,9 @@ export default function Dashboard() {
             <div className="flex flex-col space-y-6">
               <AnimatedCard delay={0.5}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl font-bold">Active Alerts</CardTitle>
+                  <CardTitle className="text-xl font-bold">
+                    Active Alerts
+                  </CardTitle>
                   <Badge variant="outline" className="ml-2">
                     {alerts.length} alerts
                   </Badge>
@@ -367,15 +416,23 @@ export default function Dashboard() {
                                 key={alert.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                                transition={{
+                                  duration: 0.3,
+                                  delay: index * 0.05,
+                                }}
                               >
-                                <AlertCard alert={alert} onClick={() => handleAlertClick(alert)} />
+                                <AlertCard
+                                  alert={alert}
+                                  onClick={() => handleAlertClick(alert)}
+                                />
                               </motion.div>
                             ))
                           ) : (
                             <div className="flex h-32 flex-col items-center justify-center rounded-lg border border-dashed p-4 text-center">
                               <Bell className="mb-2 h-8 w-8 text-muted-foreground opacity-50" />
-                              <p className="text-sm text-muted-foreground">No alerts match your criteria</p>
+                              <p className="text-sm text-muted-foreground">
+                                No alerts match your criteria
+                              </p>
                             </div>
                           )}
                         </div>
@@ -463,13 +520,19 @@ export default function Dashboard() {
 
       {/* Location Modal */}
       {showLocationModal && (
-        <LocationModal onClose={() => setShowLocationModal(false)} onLocationSet={handleLocationSet} />
+        <LocationModal
+          onClose={() => setShowLocationModal(false)}
+          onLocationSet={handleLocationSet}
+        />
       )}
 
       {/* Safety Tips Panel */}
       {showSafetyTips && selectedAlert && (
-        <SafetyTipsPanel alert={selectedAlert} onClose={() => setShowSafetyTips(false)} />
+        <SafetyTipsPanel
+          alert={selectedAlert}
+          onClose={() => setShowSafetyTips(false)}
+        />
       )}
     </div>
-  )
+  );
 }

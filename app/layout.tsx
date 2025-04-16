@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-
+import "maplibre-gl/dist/maplibre-gl.css";
+// Add this to your app/layout.tsx or similar
+import "../styles/disaster-map.css";
+// In app/layout.tsx or similar
+import "mapbox-gl/dist/mapbox-gl.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
