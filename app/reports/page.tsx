@@ -14,8 +14,8 @@ import {
   Award,
   Gift,
   Star,
-  Clock,
   Check,
+  Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,12 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import {
+  analyzeDisasterImage,
+  ImageAnalysisResult,
+  getSafetyTips,
+  SafetyTip,
+} from "@/app/services/aiImageAnalysis";
 
 // Define badge types and requirements
 const BADGES = [
@@ -101,35 +107,35 @@ const REWARDS = [
     name: "Coffee Voucher",
     description: "Free coffee at participating cafes",
     pointCost: 500,
-    image: "/coffee-voucher.png",
+    image: "/coffee.jpg",
   },
   {
     id: "emergency_kit",
     name: "Emergency Preparedness Kit",
     description: "Basic emergency supplies for your home",
     pointCost: 2000,
-    image: "/emergency-kit.png",
+    image: "/emergency.webp",
   },
   {
     id: "gas_voucher",
-    name: "Gas Station Voucher",
-    description: "$20 voucher for fuel at participating stations",
+    name: "Petrol Voucher",
+    description: "200 Rupees voucher for fuel at participating stations",
     pointCost: 1500,
-    image: "/gas-voucher.png",
+    image: "/petrol.webp",
   },
   {
     id: "donation",
     name: "Donation to Relief Fund",
     description: "Donate points to disaster relief efforts",
     pointCost: 1000,
-    image: "/donation.png",
+    image: "/donation.webp",
   },
   {
     id: "premium_membership",
     name: "Premium App Membership",
     description: "3 months of premium features in DisasterAlert",
     pointCost: 3000,
-    image: "/premium.png",
+    image: "/Netflix-Premium.png",
   },
 ];
 
@@ -137,7 +143,7 @@ export default function ReportPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [location, setLocation] = useState("");
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState(0);
   const [showRewardSection, setShowRewardSection] = useState(false);
@@ -156,6 +162,11 @@ export default function ReportPage() {
     image: null,
     damageEvidence: [] as any[], // Array to store multiple images of damage
   });
+  const [aiAnalysis, setAiAnalysis] = useState<ImageAnalysisResult | null>(
+    null
+  );
+  const [safetyTips, setSafetyTips] = useState<SafetyTip[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Load user profile from local storage on component mount
   useEffect(() => {
@@ -202,20 +213,123 @@ export default function ReportPage() {
     }, 1500);
   };
 
-  const handleImageUpload = (e: any) => {
+  const handleImageUpload = async (e: any) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file size
+      const maxSizeMB = 4;
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: `Image size exceeds ${maxSizeMB}MB. Please upload a smaller image.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as any);
+      reader.onloadend = async () => {
+        const imageData = reader.result as string;
+        setImagePreview(imageData);
         setFormData((prev) => ({ ...prev, image: file }));
+
+        // Only attempt AI analysis if a disaster type is selected
+        if (!formData.disasterType) {
+          toast({
+            title: "Disaster Type Required",
+            description:
+              "Please select a disaster type before uploading an image.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Analyze image with AI
+        setIsAnalyzing(true);
+        try {
+          const analysis = await analyzeDisasterImage(
+            imageData,
+            formData.disasterType
+          );
+          setAiAnalysis(analysis);
+
+          // Get safety tips based on disaster type
+          const tips = getSafetyTips(formData.disasterType);
+          setSafetyTips(tips);
+
+          // Update form data with AI suggestions
+          setFormData((prev) => ({
+            ...prev,
+            severity: analysis.detectedDamage.severity,
+            description:
+              prev.description || analysis.detectedDamage.description,
+          }));
+
+          // Show success toast with points
+          if (analysis.isValidDisaster) {
+            toast({
+              title: "AI Analysis Complete",
+              description: `Image analyzed! You'll earn ${analysis.pointsAwarded.total} points for this report.`,
+            });
+          } else {
+            // Show a warning if the image doesn't appear to be a valid disaster
+            toast({
+              title: "Verification Required",
+              description:
+                "This may not be a disaster image. Please verify your submission.",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("Error analyzing image:", error);
+          // Set a minimal error analysis result
+          setAiAnalysis({
+            isValidDisaster: false,
+            detectedDamage: {
+              exists: false,
+              severity: "low",
+              description: "Unable to analyze image. Please try again later.",
+              specificThreats: [],
+            },
+            confidence: 0,
+            pointsAwarded: {
+              base: 10,
+              clarity: 0,
+              severity: 0,
+              urgency: 0,
+              total: 10,
+            },
+            safetyTips: {
+              immediate: [],
+              preventive: [],
+              recovery: [],
+            },
+            imageQuality: {
+              isGoodQuality: false,
+              isClear: false,
+              hasGoodLighting: false,
+            },
+          });
+
+          // Fall back to basic safety tips
+          setSafetyTips(getSafetyTips(formData.disasterType));
+
+          toast({
+            title: "Analysis Failed",
+            description:
+              "AI analysis unavailable. You can still submit your report.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsAnalyzing(false);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleDamageImageUpload = (e: any) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files) as File[];
     if (files.length > 0) {
       const newDamageImages = [...formData.damageEvidence];
 
@@ -231,7 +345,7 @@ export default function ReportPage() {
             damageEvidence: newDamageImages,
           }));
         };
-        reader.readAsDataURL(file as any);
+        reader.readAsDataURL(file);
       });
     }
   };
@@ -1095,6 +1209,272 @@ export default function ReportPage() {
                             className="hidden"
                           />
                         </div>
+
+                        {/* AI Analysis Results */}
+                        {aiAnalysis && (
+                          <Card className="mt-4">
+                            <CardHeader>
+                              <CardTitle className="flex items-center text-lg">
+                                <Shield className="mr-2 h-5 w-5 text-blue-500" />
+                                AI Analysis Results
+                                {isAnalyzing && (
+                                  <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+                                )}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                {/* Damage Assessment */}
+                                <div>
+                                  <h4 className="font-medium mb-2">
+                                    Damage Assessment
+                                  </h4>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Badge
+                                      variant={
+                                        aiAnalysis.detectedDamage.severity ===
+                                        "high"
+                                          ? "destructive"
+                                          : aiAnalysis.detectedDamage
+                                              .severity === "medium"
+                                          ? "secondary"
+                                          : "default"
+                                      }
+                                    >
+                                      {aiAnalysis.detectedDamage.severity.toUpperCase()}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      Confidence:{" "}
+                                      {Math.round(aiAnalysis.confidence * 100)}%
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {aiAnalysis.detectedDamage.description}
+                                  </p>
+                                </div>
+
+                                {/* Specific Threats */}
+                                {aiAnalysis.detectedDamage.specificThreats
+                                  .length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium mb-2">
+                                      Identified Threats
+                                    </h4>
+                                    <div className="grid gap-2">
+                                      {aiAnalysis.detectedDamage.specificThreats.map(
+                                        (threat, index) => (
+                                          <div
+                                            key={index}
+                                            className="flex items-center gap-2 p-2 bg-red-50 rounded-md"
+                                          >
+                                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                                            <span className="text-sm text-red-700">
+                                              {threat}
+                                            </span>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Safety Tips */}
+                                <div>
+                                  <h4 className="font-medium mb-2">
+                                    Safety Tips
+                                  </h4>
+                                  <Tabs
+                                    defaultValue="immediate"
+                                    className="w-full"
+                                  >
+                                    <TabsList className="grid w-full grid-cols-3">
+                                      <TabsTrigger value="immediate">
+                                        Immediate
+                                      </TabsTrigger>
+                                      <TabsTrigger value="preventive">
+                                        Preventive
+                                      </TabsTrigger>
+                                      <TabsTrigger value="recovery">
+                                        Recovery
+                                      </TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="immediate">
+                                      <div className="space-y-2 mt-2">
+                                        {aiAnalysis.safetyTips.immediate.map(
+                                          (tip, index) => (
+                                            <div
+                                              key={index}
+                                              className="p-3 bg-red-50 rounded-lg"
+                                            >
+                                              <h5 className="font-medium text-red-700 mb-1">
+                                                {tip.title}
+                                              </h5>
+                                              <p className="text-sm text-red-600">
+                                                {tip.description}
+                                              </p>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    </TabsContent>
+                                    <TabsContent value="preventive">
+                                      <div className="space-y-2 mt-2">
+                                        {aiAnalysis.safetyTips.preventive.map(
+                                          (tip, index) => (
+                                            <div
+                                              key={index}
+                                              className="p-3 bg-blue-50 rounded-lg"
+                                            >
+                                              <h5 className="font-medium text-blue-700 mb-1">
+                                                {tip.title}
+                                              </h5>
+                                              <p className="text-sm text-blue-600">
+                                                {tip.description}
+                                              </p>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    </TabsContent>
+                                    <TabsContent value="recovery">
+                                      <div className="space-y-2 mt-2">
+                                        {aiAnalysis.safetyTips.recovery.map(
+                                          (tip, index) => (
+                                            <div
+                                              key={index}
+                                              className="p-3 bg-green-50 rounded-lg"
+                                            >
+                                              <h5 className="font-medium text-green-700 mb-1">
+                                                {tip.title}
+                                              </h5>
+                                              <p className="text-sm text-green-600">
+                                                {tip.description}
+                                              </p>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    </TabsContent>
+                                  </Tabs>
+                                </div>
+
+                                {/* Points Breakdown */}
+                                <div>
+                                  <h4 className="font-medium mb-2">
+                                    Points Earned
+                                  </h4>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between p-2 bg-slate-50 rounded-md">
+                                      <span className="text-sm text-slate-600">
+                                        Base Points
+                                      </span>
+                                      <span className="font-medium">
+                                        +{aiAnalysis.pointsAwarded.base}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-slate-50 rounded-md">
+                                      <span className="text-sm text-slate-600">
+                                        Image Quality Bonus
+                                      </span>
+                                      <span className="font-medium">
+                                        +{aiAnalysis.pointsAwarded.clarity}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-slate-50 rounded-md">
+                                      <span className="text-sm text-slate-600">
+                                        Severity Bonus
+                                      </span>
+                                      <span className="font-medium">
+                                        +{aiAnalysis.pointsAwarded.severity}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-slate-50 rounded-md">
+                                      <span className="text-sm text-slate-600">
+                                        Urgency Bonus
+                                      </span>
+                                      <span className="font-medium">
+                                        +{aiAnalysis.pointsAwarded.urgency}
+                                      </span>
+                                    </div>
+                                    <Separator className="my-2" />
+                                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                      <div className="flex items-center">
+                                        <Trophy className="mr-2 h-5 w-5 text-blue-500" />
+                                        <span className="font-medium">
+                                          Total Points
+                                        </span>
+                                      </div>
+                                      <span className="text-lg font-bold text-blue-600">
+                                        +{aiAnalysis.pointsAwarded.total}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Image Quality Assessment */}
+                                {aiAnalysis.imageQuality && (
+                                  <div>
+                                    <h4 className="font-medium mb-2">
+                                      Image Quality
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <div
+                                        className={`p-2 rounded-md text-center ${
+                                          aiAnalysis.imageQuality.isGoodQuality
+                                            ? "bg-green-50 text-green-700"
+                                            : "bg-red-50 text-red-700"
+                                        }`}
+                                      >
+                                        <p className="text-xs font-medium">
+                                          Overall Quality
+                                        </p>
+                                        <p className="text-sm">
+                                          {aiAnalysis.imageQuality.isGoodQuality
+                                            ? "Good"
+                                            : "Poor"}
+                                        </p>
+                                      </div>
+                                      <div
+                                        className={`p-2 rounded-md text-center ${
+                                          aiAnalysis.imageQuality.isClear
+                                            ? "bg-green-50 text-green-700"
+                                            : "bg-red-50 text-red-700"
+                                        }`}
+                                      >
+                                        <p className="text-xs font-medium">
+                                          Clarity
+                                        </p>
+                                        <p className="text-sm">
+                                          {aiAnalysis.imageQuality.isClear
+                                            ? "Clear"
+                                            : "Unclear"}
+                                        </p>
+                                      </div>
+                                      <div
+                                        className={`p-2 rounded-md text-center ${
+                                          aiAnalysis.imageQuality
+                                            .hasGoodLighting
+                                            ? "bg-green-50 text-green-700"
+                                            : "bg-red-50 text-red-700"
+                                        }`}
+                                      >
+                                        <p className="text-xs font-medium">
+                                          Lighting
+                                        </p>
+                                        <p className="text-sm">
+                                          {aiAnalysis.imageQuality
+                                            .hasGoodLighting
+                                            ? "Good"
+                                            : "Poor"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
 
                         <div className="flex space-x-3">
                           <Button

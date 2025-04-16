@@ -426,7 +426,7 @@ export default function Home() {
               whileHover={{ y: -5 }}
             >
               <img
-                src="https://v0.blob.com/disaster-flood.jpg"
+                src="images.jpg"
                 alt="Flood disaster"
                 className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
@@ -448,7 +448,7 @@ export default function Home() {
               whileHover={{ y: -5 }}
             >
               <img
-                src="https://v0.blob.com/disaster-wildfire.jpg"
+                src="fire.jpg"
                 alt="Wildfire disaster"
                 className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
@@ -472,7 +472,7 @@ export default function Home() {
               whileHover={{ y: -5 }}
             >
               <img
-                src="https://v0.blob.com/disaster-hurricane.jpg"
+                src="huri.jpg"
                 alt="Hurricane disaster"
                 className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
@@ -496,7 +496,7 @@ export default function Home() {
               whileHover={{ y: -5 }}
             >
               <img
-                src="https://v0.blob.com/disaster-earthquake.jpg"
+                src="earth.jpg"
                 alt="Earthquake disaster"
                 className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
@@ -507,52 +507,6 @@ export default function Home() {
                 </h3>
                 <p className="text-sm text-slate-200">
                   Seismic activity monitoring and safety protocols
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="group relative overflow-hidden rounded-xl"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              whileHover={{ y: -5 }}
-            >
-              <img
-                src="https://v0.blob.com/disaster-tornado.jpg"
-                alt="Tornado disaster"
-                className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-              <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="mb-2 text-2xl font-bold text-white">
-                  Tornadoes
-                </h3>
-                <p className="text-sm text-slate-200">
-                  Tornado path prediction and shelter guidance
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="group relative overflow-hidden rounded-xl"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              whileHover={{ y: -5 }}
-            >
-              <img
-                src="https://v0.blob.com/disaster-tsunami.jpg"
-                alt="Tsunami disaster"
-                className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-              <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="mb-2 text-2xl font-bold text-white">Tsunamis</h3>
-                <p className="text-sm text-slate-200">
-                  Early warning system and evacuation routes
                 </p>
               </div>
             </motion.div>
@@ -757,61 +711,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
-      {/* Add the DisasterMap component directly to your main page */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Real-Time Disaster Map</h2>
-        <p className="mb-4">
-          This interactive 3D map displays real-time disaster events across
-          India, including fires, cyclones, earthquakes, and floods.
-        </p>
-        <DisasterMap
-          height="600px"
-          width="100%"
-          center={[78.9629, 20.5937]} // Center of India
-          zoom={4}
-          pitch={45}
-          bearing={-10}
-        />
-      </section>
-
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2 text-red-600">
-            Fire Events
-          </h2>
-          <p>
-            Fire events are displayed with red/orange pulsating markers. The
-            animation represents the intensity and flickering nature of fires.
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2 text-blue-600">Cyclones</h2>
-          <p>
-            Cyclones are visualized with blue rotating circular patterns. The
-            spinning animation mimics the rotational nature of cyclonic storms.
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2 text-yellow-600">
-            Earthquakes
-          </h2>
-          <p>
-            Earthquakes are shown with yellow pulsing circles. The pulsating
-            animation represents seismic waves radiating from the epicenter.
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2 text-blue-800">Floods</h2>
-          <p>
-            Floods are represented with blue rippling markers. The wave-like
-            animation simulates the movement of floodwaters.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
