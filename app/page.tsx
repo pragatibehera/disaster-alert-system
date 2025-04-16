@@ -1,14 +1,22 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { ArrowRight, Bell, Clock, Globe, MapPin, Shield, Users } from "lucide-react"
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { HeroVideoBackground } from "@/components/hero-video-background"
-import { AnimatedSectionHeader } from "@/components/animated-section-header"
-import { AnimatedFeatureCard } from "@/components/animated-feature-card"
-import { ImpactCounter } from "@/components/impact-counter"
-import { TestimonialCard } from "@/components/testimonial-card"
+import Link from "next/link";
+import {
+  ArrowRight,
+  Bell,
+  Clock,
+  Globe,
+  MapPin,
+  Shield,
+  Users,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { HeroVideoBackground } from "@/components/hero-video-background";
+import { AnimatedSectionHeader } from "@/components/animated-section-header";
+import { AnimatedFeatureCard } from "@/components/animated-feature-card";
+import { ImpactCounter } from "@/components/impact-counter";
+import { TestimonialCard } from "@/components/testimonial-card";
 
 export default function Home() {
   return (
@@ -23,7 +31,9 @@ export default function Home() {
             className="mr-4 flex items-center space-x-2"
           >
             <Shield className="h-6 w-6 text-red-500" />
-            <span className="hidden font-bold sm:inline-block">DisasterAlert</span>
+            <span className="hidden font-bold sm:inline-block">
+              DisasterAlert
+            </span>
           </motion.div>
           <nav className="flex flex-1 items-center justify-end space-x-4">
             <motion.div
@@ -116,8 +126,9 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.9 }}
           >
-            Get AI-powered alerts during natural disasters to stay safe. Receive location-specific warnings, safety
-            tips, and emergency information when every second counts.
+            Get AI-powered alerts during natural disasters to stay safe. Receive
+            location-specific warnings, safety tips, and emergency information
+            when every second counts.
           </motion.p>
 
           <motion.div
@@ -126,13 +137,21 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.1 }}
           >
-            <Button asChild size="lg" className="group bg-red-600 hover:bg-red-700">
+            <Button
+              asChild
+              size="lg"
+              className="group bg-red-600 hover:bg-red-700"
+            >
               <Link href="/dashboard">
                 Check Alerts in Your Area
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
-            <Button variant="outline" size="lg" className="border-slate-200 text-white hover:bg-slate-200/20">
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-blue-300 text-white bg-transparent hover:bg-blue-400"
+            >
               Learn More
             </Button>
           </motion.div>
@@ -144,7 +163,9 @@ export default function Home() {
             className="mt-12 flex items-center space-x-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-sm"
           >
             <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
-            <span className="text-sm text-white">Live monitoring active across 150+ countries</span>
+            <span className="text-sm text-white">
+              Live monitoring active across 150+ countries
+            </span>
           </motion.div>
         </div>
 
@@ -191,11 +212,21 @@ export default function Home() {
                 }}
                 className="flex whitespace-nowrap"
               >
-                <span className="mx-4">Flood warning in Miami-Dade County, FL</span>
-                <span className="mx-4">Wildfire alert in Northern California</span>
-                <span className="mx-4">Hurricane watch for coastal Louisiana</span>
-                <span className="mx-4">Earthquake reported near Los Angeles, CA</span>
-                <span className="mx-4">Tornado warning in central Oklahoma</span>
+                <span className="mx-4">
+                  Flood warning in Miami-Dade County, FL
+                </span>
+                <span className="mx-4">
+                  Wildfire alert in Northern California
+                </span>
+                <span className="mx-4">
+                  Hurricane watch for coastal Louisiana
+                </span>
+                <span className="mx-4">
+                  Earthquake reported near Los Angeles, CA
+                </span>
+                <span className="mx-4">
+                  Tornado warning in central Oklahoma
+                </span>
               </motion.div>
             </div>
           </div>
@@ -212,7 +243,11 @@ export default function Home() {
 
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <ImpactCounter value={5000} label="Lives Saved" delay={0.2} />
-            <ImpactCounter value={12000} label="Communities Protected" delay={0.4} />
+            <ImpactCounter
+              value={12000}
+              label="Communities Protected"
+              delay={0.4}
+            />
             <ImpactCounter value={250000} label="Alerts Sent" delay={0.6} />
             <ImpactCounter value={98} label="Accuracy Rate %" delay={0.8} />
           </div>
@@ -299,8 +334,8 @@ export default function Home() {
               </div>
               <h3 className="mb-2 text-xl font-bold">Data Collection</h3>
               <p className="text-slate-300">
-                Our system continuously monitors global data sources, weather patterns, seismic activity, and official
-                alerts.
+                Our system continuously monitors global data sources, weather
+                patterns, seismic activity, and official alerts.
               </p>
             </motion.div>
 
@@ -316,8 +351,8 @@ export default function Home() {
               </div>
               <h3 className="mb-2 text-xl font-bold">AI Analysis</h3>
               <p className="text-slate-300">
-                Our AI analyzes the data to determine severity, impact area, and generates personalized safety
-                instructions.
+                Our AI analyzes the data to determine severity, impact area, and
+                generates personalized safety instructions.
               </p>
             </motion.div>
 
@@ -333,8 +368,8 @@ export default function Home() {
               </div>
               <h3 className="mb-2 text-xl font-bold">Instant Alerts</h3>
               <p className="text-slate-300">
-                You receive immediate, location-specific alerts through the app, SMS, or email with actionable safety
-                guidance.
+                You receive immediate, location-specific alerts through the app,
+                SMS, or email with actionable safety guidance.
               </p>
             </motion.div>
           </div>
@@ -397,7 +432,9 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-6">
                 <h3 className="mb-2 text-2xl font-bold text-white">Floods</h3>
-                <p className="text-sm text-slate-200">Real-time water level monitoring and evacuation guidance</p>
+                <p className="text-sm text-slate-200">
+                  Real-time water level monitoring and evacuation guidance
+                </p>
               </div>
             </motion.div>
 
@@ -416,8 +453,12 @@ export default function Home() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="mb-2 text-2xl font-bold text-white">Wildfires</h3>
-                <p className="text-sm text-slate-200">Fire movement tracking and safe evacuation routes</p>
+                <h3 className="mb-2 text-2xl font-bold text-white">
+                  Wildfires
+                </h3>
+                <p className="text-sm text-slate-200">
+                  Fire movement tracking and safe evacuation routes
+                </p>
               </div>
             </motion.div>
 
@@ -436,8 +477,12 @@ export default function Home() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="mb-2 text-2xl font-bold text-white">Hurricanes</h3>
-                <p className="text-sm text-slate-200">Storm tracking, wind speed alerts, and shelter locations</p>
+                <h3 className="mb-2 text-2xl font-bold text-white">
+                  Hurricanes
+                </h3>
+                <p className="text-sm text-slate-200">
+                  Storm tracking, wind speed alerts, and shelter locations
+                </p>
               </div>
             </motion.div>
 
@@ -456,8 +501,12 @@ export default function Home() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="mb-2 text-2xl font-bold text-white">Earthquakes</h3>
-                <p className="text-sm text-slate-200">Seismic activity monitoring and safety protocols</p>
+                <h3 className="mb-2 text-2xl font-bold text-white">
+                  Earthquakes
+                </h3>
+                <p className="text-sm text-slate-200">
+                  Seismic activity monitoring and safety protocols
+                </p>
               </div>
             </motion.div>
 
@@ -476,8 +525,12 @@ export default function Home() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="mb-2 text-2xl font-bold text-white">Tornadoes</h3>
-                <p className="text-sm text-slate-200">Tornado path prediction and shelter guidance</p>
+                <h3 className="mb-2 text-2xl font-bold text-white">
+                  Tornadoes
+                </h3>
+                <p className="text-sm text-slate-200">
+                  Tornado path prediction and shelter guidance
+                </p>
               </div>
             </motion.div>
 
@@ -497,7 +550,9 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-6">
                 <h3 className="mb-2 text-2xl font-bold text-white">Tsunamis</h3>
-                <p className="text-sm text-slate-200">Early warning system and evacuation routes</p>
+                <p className="text-sm text-slate-200">
+                  Early warning system and evacuation routes
+                </p>
               </div>
             </motion.div>
           </div>
@@ -522,12 +577,19 @@ export default function Home() {
             viewport={{ once: true, amount: 0.5 }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="mb-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Be Prepared, Not Scared</h2>
+            <h2 className="mb-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Be Prepared, Not Scared
+            </h2>
             <p className="mx-auto mb-8 max-w-2xl text-lg text-slate-200">
-              Sign up for SMS alerts to receive critical updates even when you're offline or have limited connectivity.
-              Every second counts during an emergency.
+              Sign up for SMS alerts to receive critical updates even when
+              you're offline or have limited connectivity. Every second counts
+              during an emergency.
             </p>
-            <Button asChild size="lg" className="group bg-white text-red-600 hover:bg-red-50">
+            <Button
+              asChild
+              size="lg"
+              className="group bg-white text-red-600 hover:bg-red-50"
+            >
               <Link href="/subscribe">
                 Subscribe to SMS Alerts
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -547,7 +609,8 @@ export default function Home() {
                 <span className="font-semibold">DisasterAlert</span>
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                Providing real-time disaster alerts and safety information to communities worldwide.
+                Providing real-time disaster alerts and safety information to
+                communities worldwide.
               </p>
             </div>
 
@@ -555,22 +618,34 @@ export default function Home() {
               <h3 className="mb-4 text-sm font-semibold">Product</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Pricing
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     API
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Integrations
                   </Link>
                 </li>
@@ -581,22 +656,34 @@ export default function Home() {
               <h3 className="mb-4 text-sm font-semibold">Resources</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Documentation
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Safety Tips
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Emergency Contacts
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Community
                   </Link>
                 </li>
@@ -607,22 +694,34 @@ export default function Home() {
               <h3 className="mb-4 text-sm font-semibold">Company</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Careers
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     Contact
                   </Link>
                 </li>
@@ -635,13 +734,22 @@ export default function Home() {
               © 2025 DisasterAlert. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                href="#"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
                 Privacy
               </Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                href="#"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
                 Terms
               </Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                href="#"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
                 Cookies
               </Link>
             </div>
@@ -649,5 +757,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
