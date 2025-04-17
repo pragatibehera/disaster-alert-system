@@ -142,6 +142,11 @@ export default function Dashboard() {
     arNavigator(alert);
   };
 
+  // Navigate to mobile browser AR navigator
+  const openMobileARNavigator = () => {
+    router.push("/mobile-ar-navigator");
+  };
+
   // Add back the click handler for showing safety tips
   const handleAlertClick = (alert: Alert) => {
     setSelectedAlert(alert);
@@ -288,7 +293,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push("/ar-navigator")}
+              onClick={() => router.push("/mobile-ar-navigator")}
               className="bg-black text-white hover:bg-black/80 border-black"
             >
               <Navigation className="mr-2 h-4 w-4" />
