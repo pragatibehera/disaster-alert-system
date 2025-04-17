@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { ChevronLeft, Shield, Smartphone, Bell, Check } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "@/components/ui/use-toast"
-import { Toaster } from "@/components/ui/toaster"
-import { AnimatedPageHeader } from "@/components/animated-page-header"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Shield, Smartphone, Bell, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Checkbox from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import { AnimatedPageHeader } from "@/components/animated-page-header";
 
 const disasterTypes = [
   { id: "flood", label: "Flood" },
@@ -21,43 +21,48 @@ const disasterTypes = [
   { id: "tornado", label: "Tornado" },
   { id: "landslide", label: "Landslide" },
   { id: "tsunami", label: "Tsunami" },
-]
+];
 
 export default function SubscribePage() {
-  const router = useRouter()
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [selectedTypes, setSelectedTypes] = useState([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [subscribed, setSubscribed] = useState(false)
+  const router = useRouter();
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
 
-  const handleTypeToggle = (typeId) => {
-    setSelectedTypes((prev) => (prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId]))
-  }
+  const handleTypeToggle = (typeId: string) => {
+    setSelectedTypes((prev: string[]) =>
+      prev.includes(typeId)
+        ? prev.filter((id) => id !== typeId)
+        : [...prev, typeId]
+    );
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
     if (selectedTypes.length === 0) {
       toast({
         title: "Selection Required",
         description: "Please select at least one disaster type.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     // Simulate form submission
     setTimeout(() => {
-      setIsSubmitting(false)
-      setSubscribed(true)
+      setIsSubmitting(false);
+      setSubscribed(true);
       toast({
         title: "Subscription Successful",
-        description: "You will now receive SMS alerts for the selected disaster types.",
-      })
-    }, 2000)
-  }
+        description:
+          "You will now receive SMS alerts for the selected disaster types.",
+      });
+    }, 2000);
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -69,7 +74,12 @@ export default function SubscribePage() {
         className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
       >
         <div className="container flex h-16 items-center">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")} className="mr-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/dashboard")}
+            className="mr-2"
+          >
             <ChevronLeft className="h-4 w-4" />
             Back
           </Button>
@@ -100,7 +110,9 @@ export default function SubscribePage() {
               >
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-center text-2xl font-bold">Subscription Confirmed</CardTitle>
+                    <CardTitle className="text-center text-2xl font-bold">
+                      Subscription Confirmed
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="text-center">
                     <motion.div
@@ -132,7 +144,10 @@ export default function SubscribePage() {
                           key={type}
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3, delay: 0.7 + index * 0.1 }}
+                          transition={{
+                            duration: 0.3,
+                            delay: 0.7 + index * 0.1,
+                          }}
                           className="rounded-full bg-slate-100 px-3 py-1 text-sm"
                         >
                           {disasterTypes.find((t) => t.id === type)?.label}
@@ -153,10 +168,17 @@ export default function SubscribePage() {
                       transition={{ duration: 0.5, delay: 1 }}
                       className="flex space-x-4"
                     >
-                      <Button variant="outline" className="flex-1" onClick={() => setSubscribed(false)}>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setSubscribed(false)}
+                      >
                         Edit Subscription
                       </Button>
-                      <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={() => router.push("/dashboard")}>
+                      <Button
+                        className="flex-1 bg-red-600 hover:bg-red-700"
+                        onClick={() => router.push("/dashboard")}
+                      >
                         Return to Dashboard
                       </Button>
                     </motion.div>
@@ -196,7 +218,9 @@ export default function SubscribePage() {
                           onChange={(e) => setPhoneNumber(e.target.value)}
                           required
                         />
-                        <p className="text-xs text-muted-foreground">Standard message and data rates may apply.</p>
+                        <p className="text-xs text-muted-foreground">
+                          Standard message and data rates may apply.
+                        </p>
                       </motion.div>
 
                       {/* Disaster Types */}
@@ -213,16 +237,24 @@ export default function SubscribePage() {
                               key={type.id}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
+                              transition={{
+                                duration: 0.3,
+                                delay: 0.3 + index * 0.05,
+                              }}
                               className="flex items-center space-x-2"
                             >
                               <Checkbox
                                 id={type.id}
                                 checked={selectedTypes.includes(type.id)}
-                                onCheckedChange={() => handleTypeToggle(type.id)}
+                                onCheckedChange={() =>
+                                  handleTypeToggle(type.id)
+                                }
                                 className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                               />
-                              <Label htmlFor={type.id} className="cursor-pointer text-sm font-normal">
+                              <Label
+                                htmlFor={type.id}
+                                className="cursor-pointer text-sm font-normal"
+                              >
                                 {type.label}
                               </Label>
                             </motion.div>
@@ -239,7 +271,11 @@ export default function SubscribePage() {
                         <Button
                           type="submit"
                           className="w-full bg-red-600 hover:bg-red-700"
-                          disabled={isSubmitting || !phoneNumber || selectedTypes.length === 0}
+                          disabled={
+                            isSubmitting ||
+                            !phoneNumber ||
+                            selectedTypes.length === 0
+                          }
                         >
                           {isSubmitting ? (
                             <>
@@ -281,5 +317,5 @@ export default function SubscribePage() {
       </main>
       <Toaster />
     </div>
-  )
+  );
 }

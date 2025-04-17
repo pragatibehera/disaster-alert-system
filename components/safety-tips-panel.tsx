@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Navigation,
   Smartphone,
+  Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,8 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import { ARSafetyNavigator } from "./ar-safety-navigator";
+import { smsService } from "@/lib/sms-service";
 
 interface Alert {
   id: string;
@@ -42,9 +45,10 @@ export function SafetyTipsPanel({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sendingProgress, setSendingProgress] = useState(0);
   const [showARNavigator, setShowARNavigator] = useState(false);
 
-  const handleSendSMS = () => {
+  const handleSendSMS = async () => {
     if (!phoneNumber) {
       toast({
         title: "Phone Number Required",
@@ -55,15 +59,67 @@ export function SafetyTipsPanel({
     }
 
     setIsSending(true);
-    // Simulate sending SMS
-    setTimeout(() => {
+    setSendingProgress(10);
+
+    try {
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setSendingProgress((prev) => {
+          if (prev < 90) return prev + 10;
+          return prev;
+        });
+      }, 300);
+
+      // First send safety tips based on disaster type
+      const tipsResult = await smsService.sendSafetyTips(
+        phoneNumber,
+        alert.type
+      );
+
+      // Then send the alert details
+      const alertResult = await smsService.sendDisasterAlert(
+        phoneNumber,
+        alert.type,
+        alert.location,
+        alert.severity,
+        "Follow safety instructions. Stay tuned for updates."
+      );
+
+      // Complete the progress and clear interval
+      clearInterval(progressInterval);
+      setSendingProgress(100);
+
+      if (tipsResult.success && alertResult.success) {
+        // Successful sending
+        setTimeout(() => {
+          setIsSending(false);
+          setSent(true);
+          toast({
+            title: "Safety Tips Sent",
+            description: `Safety instructions have been sent to ${phoneNumber}.`,
+          });
+        }, 500);
+      } else {
+        // Handle error
+        setIsSending(false);
+        toast({
+          title: "Failed to Send Messages",
+          description:
+            alertResult.error ||
+            "There was an error sending the SMS. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error sending SMS:", error);
       setIsSending(false);
-      setSent(true);
+      setSendingProgress(0);
       toast({
-        title: "Safety Tips Sent",
-        description: `Safety instructions have been sent to ${phoneNumber}.`,
+        title: "SMS Sending Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-    }, 1500);
+    }
   };
 
   // Generate safety tips based on disaster type
@@ -301,26 +357,34 @@ export function SafetyTipsPanel({
                   key="input"
                   initial={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex space-x-2"
                 >
-                  <Input
-                    type="tel"
-                    placeholder="Enter phone number"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                  />
-                  <Button
-                    onClick={handleSendSMS}
-                    disabled={isSending}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    {isSending ? (
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    ) : (
-                      <Send className="mr-2 h-4 w-4" />
-                    )}
-                    {isSending ? "Sending..." : "Send"}
-                  </Button>
+                  {isSending ? (
+                    <div className="space-y-2">
+                      <Progress value={sendingProgress} className="h-2" />
+                      <p className="text-xs text-center text-slate-500">
+                        {sendingProgress < 100
+                          ? "Sending safety instructions..."
+                          : "Sent!"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <Input
+                        type="tel"
+                        placeholder="Enter phone number"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                      />
+                      <Button
+                        onClick={handleSendSMS}
+                        disabled={isSending}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Send
+                      </Button>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div

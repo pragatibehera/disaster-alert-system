@@ -385,29 +385,6 @@ export default function Dashboard() {
             {/* First column - Stats */}
             <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
               {/* Emergency AR Navigation Card */}
-              <Card className="overflow-hidden border-orange-200 bg-gradient-to-br from-orange-50 to-rose-50">
-                <CardContent className="p-0">
-                  <div className="flex flex-col items-center justify-center p-6 text-center">
-                    <div className="mb-4 rounded-full bg-red-100 p-3">
-                      <Navigation className="h-8 w-8 text-red-600" />
-                    </div>
-                    <h3 className="mb-2 text-lg font-semibold">
-                      Emergency Navigation
-                    </h3>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Use AR to navigate to safety from active disasters
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="bg-red-600 hover:bg-red-700 text-white border-0"
-                      onClick={() => openARNavigator()}
-                    >
-                      <Navigation className="mr-2 h-4 w-4" />
-                      Navigate to Safety
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
 
