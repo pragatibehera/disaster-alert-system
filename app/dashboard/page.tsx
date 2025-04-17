@@ -302,14 +302,6 @@ export default function Dashboard() {
               <Smartphone className="mr-2 h-4 w-4" />
               SMS Alerts
             </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className="bg-red-600 hover:bg-red-700"
-            >
-              <Bell className="mr-2 h-4 w-4" />
-              My Alerts
-            </Button>
           </motion.div>
         </div>
       </motion.header>
@@ -418,24 +410,6 @@ export default function Dashboard() {
                   <Trophy className="mr-2 h-5 w-5 text-amber-500" />
                   Your Disaster Response Profile
                 </CardTitle>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openARNavigator()}
-                    className="bg-red-600 hover:bg-red-700 text-white border-0"
-                  >
-                    <Navigation className="mr-2 h-4 w-4" />
-                    AR Navigation
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/reports")}
-                  >
-                    Submit Report
-                  </Button>
-                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-6 md:grid-cols-3">
