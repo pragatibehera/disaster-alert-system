@@ -38,12 +38,13 @@ import { Label } from "@/components/ui/label";
 import { LocationModal } from "@/components/location-modal";
 import { DisasterMap } from "@/components/disaster-map";
 import { SafetyTipsPanel } from "@/components/safety-tips-panel";
-import { ARSafetyNavigator } from "@/components/ar-safety-navigator";
+import { EnhancedARSafetyNavigator } from "@/components/enhanced-ar-navigator";
 import { AlertCard } from "@/components/alert-card";
 import { StatCard } from "@/components/stat-card";
 import { AnimatedCard } from "@/components/animated-card";
 import { mockAlerts } from "@/lib/mock-data";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useARNavigator } from "@/lib/ar-integration";
 
 // Define the Alert interface based on the mockAlerts structure
 interface Alert {
@@ -67,9 +68,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [showSafetyTips, setShowSafetyTips] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-  const [showARNavigator, setShowARNavigator] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+
+  // Use the AR Navigation hook with renamed function to avoid conflicts
+  const { openARNavigator: arNavigator, ARNavigatorComponent } =
+    useARNavigator();
+
   const [userProfile, setUserProfile] = useState({
     points: 0,
     totalReports: 0,
@@ -132,9 +137,26 @@ export default function Dashboard() {
     refreshAlerts();
   };
 
+  const handleARNavigation = (alert: Alert) => {
+    setSelectedAlert(alert);
+    arNavigator(alert);
+  };
+
+  // Add back the click handler for showing safety tips
   const handleAlertClick = (alert: Alert) => {
     setSelectedAlert(alert);
     setShowSafetyTips(true);
+  };
+
+  // Original function for backward compatibility
+  const openARNavigator = () => {
+    // If no alert is selected, use the first alert in the list
+    if (!selectedAlert && alerts.length > 0) {
+      setSelectedAlert(alerts[0] as Alert);
+      arNavigator(alerts[0] as Alert);
+    } else if (selectedAlert) {
+      arNavigator(selectedAlert);
+    }
   };
 
   // Filter alerts based on active tab
@@ -225,15 +247,6 @@ export default function Dashboard() {
   const userBadges = BADGES.filter((badge) =>
     userProfile.badges.includes(badge.id)
   );
-
-  // Add function to open AR Navigator directly
-  const openARNavigator = () => {
-    // If no alert is selected, use the first alert in the list
-    if (!selectedAlert && alerts.length > 0) {
-      setSelectedAlert(alerts[0] as Alert);
-    }
-    setShowARNavigator(true);
-  };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -367,6 +380,37 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
+          {/* Main stats and alerts grid */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {/* First column - Stats */}
+            <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
+              {/* Emergency AR Navigation Card */}
+              <Card className="overflow-hidden border-orange-200 bg-gradient-to-br from-orange-50 to-rose-50">
+                <CardContent className="p-0">
+                  <div className="flex flex-col items-center justify-center p-6 text-center">
+                    <div className="mb-4 rounded-full bg-red-100 p-3">
+                      <Navigation className="h-8 w-8 text-red-600" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold">
+                      Emergency Navigation
+                    </h3>
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Use AR to navigate to safety from active disasters
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="bg-red-600 hover:bg-red-700 text-white border-0"
+                      onClick={() => openARNavigator()}
+                    >
+                      <Navigation className="mr-2 h-4 w-4" />
+                      Navigate to Safety
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
           {/* Stats Row */}
           <div className="mb-6 grid gap-4 md:grid-cols-4">
             {stats.map((stat, index) => (
@@ -401,7 +445,7 @@ export default function Dashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={openARNavigator}
+                    onClick={() => openARNavigator()}
                     className="bg-red-600 hover:bg-red-700 text-white border-0"
                   >
                     <Navigation className="mr-2 h-4 w-4" />
@@ -745,40 +789,22 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Add AR Navigator Sheet */}
-      {showARNavigator && selectedAlert && (
-        <Sheet
-          open={showARNavigator}
-          onOpenChange={() => setShowARNavigator(false)}
-        >
-          <SheetContent className="w-full sm:max-w-md p-0">
-            <ARSafetyNavigator
-              disaster={{
-                type: selectedAlert.type,
-                location: selectedAlert.location,
-                severity: selectedAlert.severity,
-              }}
-              onClose={() => setShowARNavigator(false)}
-            />
-          </SheetContent>
-        </Sheet>
-      )}
-
       {/* Location Modal */}
-      {showLocationModal && (
-        <LocationModal
-          onClose={() => setShowLocationModal(false)}
-          onLocationSet={handleLocationSet}
-        />
-      )}
+      <LocationModal
+        onClose={() => setShowLocationModal(false)}
+        onLocationSet={handleLocationSet}
+      />
 
       {/* Safety Tips Panel */}
-      {showSafetyTips && selectedAlert && (
+      {selectedAlert && showSafetyTips && (
         <SafetyTipsPanel
           alert={selectedAlert}
           onClose={() => setShowSafetyTips(false)}
         />
       )}
+
+      {/* AR Navigator Component from hook */}
+      <ARNavigatorComponent />
     </div>
   );
 }

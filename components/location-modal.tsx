@@ -1,157 +1,178 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState } from "react";
+import { Search, MapPin, X } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-import { useState } from "react"
-import { MapPin, Search, Locate } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+// Sample location suggestions for demonstration
+const LOCATION_SUGGESTIONS = [
+  "New York, NY",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "Houston, TX",
+  "Phoenix, AZ",
+  "Philadelphia, PA",
+  "San Antonio, TX",
+  "San Diego, CA",
+  "Dallas, TX",
+  "San Jose, CA"
+];
 
-const popularLocations = ["New York, NY", "Los Angeles, CA", "Chicago, IL", "Houston, TX", "Miami, FL", "Seattle, WA"]
+interface LocationModalProps {
+  onClose: () => void;
+  onLocationSet: (location: string) => void;
+}
 
-export function LocationModal({
-  onClose,
-  onLocationSet,
-}: {
-  onClose: () => void
-  onLocationSet: (location: string) => void
-}) {
-  const [location, setLocation] = useState("")
-  const [isDetecting, setIsDetecting] = useState(false)
-  const [step, setStep] = useState<"search" | "confirm">("search")
-  const [detectedLocation, setDetectedLocation] = useState("")
+export function LocationModal({ onClose, onLocationSet }: LocationModalProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
-  const handleDetectLocation = () => {
-    setIsDetecting(true)
-    // Simulate geolocation detection
-    setTimeout(() => {
-      const detected = "San Francisco, CA"
-      setDetectedLocation(detected)
-      setLocation(detected)
-      setIsDetecting(false)
-      setStep("confirm")
-    }, 1500)
-  }
+  // Filter suggestions based on search query
+  const filteredSuggestions = searchQuery
+    ? LOCATION_SUGGESTIONS.filter(location =>
+        location.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (location.trim()) {
-      onLocationSet(location)
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    // In a real app, you might want to fetch suggestions from an API
+    setSuggestions(filteredSuggestions);
+  };
+
+  const handleSelectLocation = (location: string) => {
+    onLocationSet(location);
+    setIsOpen(false);
+  };
+
+  const handleUseCurrentLocation = () => {
+    setUsingCurrentLocation(true);
+    
+    // Use browser geolocation API to get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // In a real app, you would reverse geocode the coordinates to get a location name
+          // For this example, we'll just use the coordinates
+          const lat = position.coords.latitude.toFixed(4);
+          const lng = position.coords.longitude.toFixed(4);
+          const locationString = `Current Location (${lat}, ${lng})`;
+          onLocationSet(locationString);
+          setUsingCurrentLocation(false);
+          setIsOpen(false);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setUsingCurrentLocation(false);
+          // Fallback to a default location
+          onLocationSet("Default Location");
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+      setUsingCurrentLocation(false);
+      // Fallback to a default location
+      onLocationSet("Default Location");
     }
-  }
+  };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) onClose();
+      }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Set Your Location</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Set Your Location</DialogTitle>
         </DialogHeader>
-
-        <AnimatePresence mode="wait">
-          {step === "search" ? (
-            <motion.div
-              key="search"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Enter city, state or zip code"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleDetectLocation}
-                  disabled={isDetecting}
-                >
-                  {isDetecting ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"></div>
-                      Detecting...
-                    </>
-                  ) : (
-                    <>
-                      <MapPin className="mr-2 h-4 w-4" />
-                      Use My Current Location
-                    </>
-                  )}
-                </Button>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Popular Locations</p>
-                  <div className="flex flex-wrap gap-2">
-                    {popularLocations.map((loc) => (
-                      <motion.div key={loc} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setLocation(loc)}
-                          className="rounded-full"
-                        >
-                          {loc}
-                        </Button>
-                      </motion.div>
-                    ))}
+        
+        <div className="space-y-4 py-4">
+          <div className="flex flex-col space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search for a city or zip code..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+            
+            {searchQuery && filteredSuggestions.length > 0 && (
+              <div className="mt-1 max-h-60 overflow-auto rounded-md border bg-white shadow-lg">
+                {filteredSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="flex cursor-pointer items-center px-4 py-2 hover:bg-slate-100"
+                    onClick={() => handleSelectLocation(suggestion)}
+                  >
+                    <MapPin className="mr-2 h-4 w-4 text-slate-500" />
+                    {suggestion}
                   </div>
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="ghost" onClick={onClose}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={!location.trim()} className="bg-red-600 hover:bg-red-700">
-                    Set Location
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="confirm"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
+                ))}
+              </div>
+            )}
+            
+            {searchQuery && filteredSuggestions.length === 0 && (
+              <div className="mt-1 rounded-md border bg-white p-4 text-center text-sm text-muted-foreground">
+                No locations found. Try a different search term.
+              </div>
+            )}
+          </div>
+          
+          <div className="pt-2">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              onClick={handleUseCurrentLocation}
+              disabled={usingCurrentLocation}
             >
-              <div className="flex flex-col items-center justify-center rounded-lg bg-slate-50 p-6 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <Locate className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="mb-1 text-lg font-medium">Location Detected</h3>
-                <p className="text-sm text-muted-foreground">We've detected your location as:</p>
-                <p className="mt-2 text-xl font-bold">{detectedLocation}</p>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setStep("search")}>
-                  Change
-                </Button>
+              <MapPin className="mr-2 h-4 w-4 text-blue-500" />
+              {usingCurrentLocation ? "Getting your location..." : "Use my current location"}
+            </Button>
+          </div>
+          
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Suggested Locations</p>
+            <div className="grid grid-cols-2 gap-2">
+              {LOCATION_SUGGESTIONS.slice(0, 6).map((location, index) => (
                 <Button
-                  type="button"
-                  onClick={() => onLocationSet(detectedLocation)}
-                  className="bg-red-600 hover:bg-red-700"
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => handleSelectLocation(location)}
                 >
-                  Confirm Location
+                  <MapPin className="mr-2 h-3 w-3 text-slate-500" />
+                  <span className="truncate">{location}</span>
                 </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto" 
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

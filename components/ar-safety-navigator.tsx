@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUpCircle,
   MapPin,
@@ -11,10 +11,15 @@ import {
   Navigation,
   Target,
   RotateCcw,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "@/components/ui/use-toast";
 
 // Interface for the component props
 interface ARSafetyNavigatorProps {
@@ -52,7 +57,9 @@ export function ARSafetyNavigator({
 }: ARSafetyNavigatorProps) {
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // State for permissions and status
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -69,6 +76,7 @@ export function ARSafetyNavigator({
   const [distance, setDistance] = useState<string>("Calculating...");
   const [safetyDirection, setSafetyDirection] = useState<number>(0);
   const [evacuationProgress, setEvacuationProgress] = useState(0);
+  const [currentLocation, setCurrentLocation] = useState({ lat: 0, lng: 0 });
 
   // UI state
   const [showDirections, setShowDirections] = useState(false);
@@ -76,73 +84,99 @@ export function ARSafetyNavigator({
   const [waypoints, setWaypoints] = useState(generateMockWaypoints());
   const [showWaypointReached, setShowWaypointReached] = useState(false);
   const [calibrating, setCalibrating] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
 
   // Check browser compatibility
   useEffect(() => {
-    // Check if getUserMedia is supported
-    const isMediaDevicesSupported =
-      typeof navigator !== "undefined" &&
-      navigator.mediaDevices &&
-      !!navigator.mediaDevices.getUserMedia;
+    // More comprehensive browser compatibility check
+    const checkBrowserCompatibility = () => {
+      const isMediaDevicesSupported =
+        typeof navigator !== "undefined" &&
+        navigator.mediaDevices &&
+        !!navigator.mediaDevices.getUserMedia;
 
-    if (!isMediaDevicesSupported) {
-      console.log("Media devices not supported in this browser");
-      setIncompatibleBrowser(true);
-      setLoading(false);
-      return;
+      // Check for WebXR support (advanced AR)
+      const isWebXRSupported =
+        typeof navigator !== "undefined" && "xr" in navigator;
+
+      // Check for deviceorientation support
+      const isOrientationSupported = "DeviceOrientationEvent" in window;
+
+      // Check if we're on a mobile device
+      const isMobileDevice =
+        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+
+      // Special check for iOS 13+ which requires permission for deviceorientation
+      const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+        !(window as any).MSStream;
+      const isiOS13Plus =
+        isIOS &&
+        typeof window !== "undefined" &&
+        window.DeviceOrientationEvent &&
+        typeof (DeviceOrientationEvent as any).requestPermission === "function";
+
+      if (!isMediaDevicesSupported) {
+        console.warn("Media devices not supported");
+        setIncompatibleBrowser(true);
+        setLoading(false);
+        return false;
+      }
+
+      if (!isOrientationSupported) {
+        console.warn("Device orientation not supported");
+        // We'll continue but might need fallback mode
+      }
+
+      if (isiOS13Plus) {
+        setShowPermissionPrompt(true);
+      }
+
+      return true;
+    };
+
+    const isCompatible = checkBrowserCompatibility();
+    if (!isCompatible) {
+      toast({
+        title: "Browser Not Fully Compatible",
+        description: "Some AR features may be limited on your device.",
+        variant: "destructive",
+      });
     }
 
-    // Check if DeviceOrientation API is supported
-    const isOrientationSupported = "DeviceOrientationEvent" in window;
-    if (!isOrientationSupported) {
-      console.log("Device orientation not supported in this browser");
+    // Get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+          // Continue without precise location
+        }
+      );
     }
   }, []);
 
-  // Request and set up camera
+  // Setup device orientation for compass with better permission handling
   useEffect(() => {
-    if (!videoRef.current || incompatibleBrowser || !loading) return;
-
-    const setupCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
-
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setHasPermission(true);
-        } else {
-          console.error("Still no video element after setup");
-          setError("Camera initialization failed");
-        }
-      } catch (err: any) {
-        setError("Camera permission denied or error occurred");
-        setHasPermission(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Delay slightly to ensure video element is mounted
-    setTimeout(setupCamera, 50);
-  }, [videoRef.current, incompatibleBrowser, loading]);
-
-  // Set up device orientation for compass
-  useEffect(() => {
-    // Skip if browser is incompatible
     if (incompatibleBrowser) return;
 
     // Function to handle orientation events
     function handleOrientation(event: DeviceOrientationEvent) {
       if (event.alpha !== null) {
+        // Alpha is the compass direction the device is facing
         setCompassHeading(event.alpha);
       }
     }
 
-    // Check if we need to request permission (iOS 13+)
+    // Setup orientation permissions and tracking
     async function setupOrientationTracking() {
       try {
         // For iOS 13+ devices
@@ -152,51 +186,64 @@ export function ARSafetyNavigator({
           typeof (DeviceOrientationEvent as any).requestPermission ===
             "function"
         ) {
-          console.log("Requesting DeviceOrientation permission for iOS");
-          const permissionState = await (
-            DeviceOrientationEvent as any
-          ).requestPermission();
+          if (showPermissionPrompt) {
+            // Wait for user to explicitly request permission via UI
+            return;
+          }
 
-          if (permissionState === "granted") {
-            console.log("DeviceOrientation permission granted");
-            window.addEventListener("deviceorientation", handleOrientation);
-            setHasOrientationPermission(true);
-          } else {
-            console.log("DeviceOrientation permission denied");
+          try {
+            const permissionState = await (
+              DeviceOrientationEvent as any
+            ).requestPermission();
+
+            if (permissionState === "granted") {
+              console.log("DeviceOrientation permission granted");
+              window.addEventListener("deviceorientation", handleOrientation);
+              setHasOrientationPermission(true);
+            } else {
+              console.log("DeviceOrientation permission denied");
+              setHasOrientationPermission(false);
+              toast({
+                title: "Permission Denied",
+                description:
+                  "Orientation sensors are needed for AR navigation.",
+                variant: "destructive",
+              });
+            }
+          } catch (err) {
+            console.error("iOS orientation permission error:", err);
             setHasOrientationPermission(false);
           }
         }
         // For non-iOS devices or older iOS versions
         else {
-          console.log("No special permission needed for DeviceOrientation");
           window.addEventListener("deviceorientation", handleOrientation);
           setHasOrientationPermission(true);
         }
       } catch (err) {
-        console.error("Error requesting orientation permission:", err);
+        console.error("Error setting up orientation:", err);
         setHasOrientationPermission(false);
       }
     }
 
-    // Start orientation setup
     setupOrientationTracking();
 
-    // Simulate distance calculation
-    const interval = setInterval(() => {
+    // Simulate distance calculation (in a real app, this would use actual geolocation)
+    const distanceInterval = setInterval(() => {
       const randomDistance = (0.5 + Math.random() * 1.5).toFixed(1);
       setDistance(`${randomDistance} miles`);
     }, 3000);
 
-    // Simulate initial safety direction
+    // Set initial safety direction
     const initialDirection = Math.random() * 360;
     setSafetyDirection(initialDirection);
 
-    // Set up a separate interval for updating safety direction with small changes
+    // Set up a separate interval for updating safety direction with small changes to simulate movement
     const directionInterval = setInterval(() => {
       setSafetyDirection((prev) => (prev + (Math.random() * 2 - 1)) % 360);
     }, 2000);
 
-    // Simulate evacuation progress
+    // Simulate evacuation progress increase
     const progressInterval = setInterval(() => {
       setEvacuationProgress((prev) => {
         const newProgress = Math.min(prev + Math.random() * 2, 100);
@@ -204,9 +251,9 @@ export function ARSafetyNavigator({
       });
     }, 5000);
 
-    // Simulate waypoint reaches
+    // Simulate reaching waypoints
     const waypointInterval = setInterval(() => {
-      if (currentWaypoint < waypoints.length - 1) {
+      if (currentWaypoint < waypoints.length - 1 && !showInstructions) {
         // Simulate reaching a waypoint
         setWaypoints((prevWaypoints) => {
           const newWaypoints = [...prevWaypoints];
@@ -214,9 +261,11 @@ export function ARSafetyNavigator({
           return newWaypoints;
         });
 
+        // Show waypoint reached notification
         setShowWaypointReached(true);
         setTimeout(() => setShowWaypointReached(false), 2000);
 
+        // Move to next waypoint
         setCurrentWaypoint((prev) => prev + 1);
       }
     }, 15000);
@@ -224,12 +273,184 @@ export function ARSafetyNavigator({
     // Clean up all listeners and intervals
     return () => {
       window.removeEventListener("deviceorientation", handleOrientation);
-      clearInterval(interval);
+      clearInterval(distanceInterval);
       clearInterval(directionInterval);
       clearInterval(progressInterval);
       clearInterval(waypointInterval);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
-  }, [incompatibleBrowser, currentWaypoint, waypoints.length]);
+  }, [
+    incompatibleBrowser,
+    currentWaypoint,
+    waypoints.length,
+    showInstructions,
+    showPermissionPrompt,
+  ]);
+
+  // Request and set up camera with improved error handling
+  useEffect(() => {
+    if (
+      !videoRef.current ||
+      incompatibleBrowser ||
+      !loading ||
+      showInstructions
+    )
+      return;
+
+    const setupCamera = async () => {
+      try {
+        // First, try with both camera and microphone to maximize compatibility
+        const constraints = {
+          video: {
+            facingMode: "environment",
+            width: { ideal: window.innerWidth },
+            height: { ideal: window.innerHeight },
+          },
+          audio: false,
+        };
+
+        console.log("Requesting media with constraints:", constraints);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // Store the stream reference for cleanup
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            if (videoRef.current) {
+              videoRef.current
+                .play()
+                .then(() => {
+                  setHasPermission(true);
+                  setLoading(false);
+                  // Start canvas rendering if we're using AR overlay
+                  if (canvasRef.current) {
+                    startARRendering();
+                  }
+                })
+                .catch((err) => {
+                  console.error("Error playing video:", err);
+                  setError("Failed to start camera stream. Please try again.");
+                  setHasPermission(false);
+                  setLoading(false);
+                });
+            }
+          };
+        } else {
+          console.error("Video element not available after setup");
+          setError("Camera initialization failed. Please reload.");
+          setHasPermission(false);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("Camera permission error:", err);
+
+        // Provide more specific error messages based on the error
+        if (err.name === "NotAllowedError") {
+          setError(
+            "Camera permission denied. Please allow camera access in your browser settings."
+          );
+        } else if (err.name === "NotFoundError") {
+          setError("No camera found on this device.");
+        } else if (err.name === "NotReadableError") {
+          setError("Camera is already in use by another application.");
+        } else {
+          setError(
+            "Failed to access camera: " + (err.message || "Unknown error")
+          );
+        }
+
+        setHasPermission(false);
+        setLoading(false);
+      }
+    };
+
+    setupCamera();
+
+    // Cleanup function
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop();
+        });
+      }
+    };
+  }, [videoRef.current, incompatibleBrowser, loading, showInstructions]);
+
+  // Function to start AR rendering on canvas
+  const startARRendering = () => {
+    if (!canvasRef.current || !videoRef.current) return;
+
+    const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) return;
+
+    const renderFrame = () => {
+      if (!canvasRef.current || !videoRef.current) return;
+
+      // Match canvas size to video
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+
+      // Draw video frame
+      ctx.drawImage(videoRef.current, 0, 0);
+
+      // Draw AR elements here (arrows, indicators, etc.)
+      drawARElements(ctx);
+
+      // Continue animation loop
+      animationFrameRef.current = requestAnimationFrame(renderFrame);
+    };
+
+    // Start animation loop
+    animationFrameRef.current = requestAnimationFrame(renderFrame);
+  };
+
+  // Function to draw AR elements on canvas
+  const drawARElements = (ctx: CanvasRenderingContext2D) => {
+    if (!canvasRef.current) return;
+
+    const width = canvasRef.current.width;
+    const height = canvasRef.current.height;
+
+    // Example: Draw direction arrow
+    const arrowSize = Math.min(width, height) * 0.2;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Calculate arrow rotation based on compass and safety direction
+    const arrowRotation = (safetyDirection - compassHeading + 360) % 360;
+    const radians = (arrowRotation * Math.PI) / 180;
+
+    // Save context state
+    ctx.save();
+
+    // Translate to center
+    ctx.translate(centerX, centerY);
+
+    // Rotate context
+    ctx.rotate(radians);
+
+    // Draw arrow
+    ctx.beginPath();
+    ctx.moveTo(0, -arrowSize); // Arrow tip
+    ctx.lineTo(arrowSize / 2, arrowSize / 3); // Bottom right
+    ctx.lineTo(0, 0); // Middle bottom
+    ctx.lineTo(-arrowSize / 2, arrowSize / 3); // Bottom left
+    ctx.closePath();
+
+    // Style and fill arrow
+    ctx.fillStyle = "rgba(255, 50, 50, 0.7)";
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    // Restore context
+    ctx.restore();
+  };
 
   // Calculate the visual rotation of the arrow based on compass and safety direction
   const arrowRotation = (safetyDirection - compassHeading + 360) % 360;
@@ -243,6 +464,10 @@ export function ARSafetyNavigator({
       setCalibrating(false);
       setWaypoints(generateMockWaypoints());
       setCurrentWaypoint(0);
+      toast({
+        title: "Calibration Complete",
+        description: "Your AR navigator has been recalibrated.",
+      });
     }, 3000);
   };
 
@@ -257,31 +482,178 @@ export function ARSafetyNavigator({
         const permissionState = await (
           DeviceOrientationEvent as any
         ).requestPermission();
+
         if (permissionState === "granted") {
           setHasOrientationPermission(true);
+          setShowPermissionPrompt(false);
           window.location.reload(); // Refresh to activate sensors
         } else {
           setHasOrientationPermission(false);
+          toast({
+            title: "Permission Denied",
+            description: "Motion sensors are needed for AR navigation.",
+            variant: "destructive",
+          });
         }
       } catch (err) {
         console.error("Error requesting orientation permission:", err);
         setHasOrientationPermission(false);
       }
+    } else {
+      // For non-iOS devices, just continue
+      setHasOrientationPermission(true);
+      setShowPermissionPrompt(false);
     }
   };
+
+  // Handle start AR navigation after instructions
+  const handleStartAR = () => {
+    setShowInstructions(false);
+    setLoading(true); // Trigger camera setup
+  };
+
+  // Instructions screen
+  if (showInstructions) {
+    return (
+      <div className="relative flex min-h-[70vh] w-full flex-col items-center justify-center overflow-hidden bg-black text-white p-6">
+        <div className="absolute top-4 left-4 z-10">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-white"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </div>
+
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2">
+            AR Navigation Instructions
+          </h2>
+          <p className="text-slate-300 mb-8">
+            Follow these steps to safely navigate away from the{" "}
+            {disaster.type.toLowerCase()} area.
+          </p>
+        </div>
+
+        <div className="space-y-6 w-full max-w-md">
+          <div className="bg-slate-800/70 p-4 rounded-lg flex items-start">
+            <div className="bg-red-500/20 p-2 rounded-full mr-3 mt-1">
+              <Camera className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <h3 className="font-medium">Allow Camera Access</h3>
+              <p className="text-sm text-slate-300">
+                The app needs to use your camera to show evacuation directions
+                overlaid on your surroundings.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/70 p-4 rounded-lg flex items-start">
+            <div className="bg-blue-500/20 p-2 rounded-full mr-3 mt-1">
+              <Compass className="h-5 w-5 text-blue-500" />
+            </div>
+            <div>
+              <h3 className="font-medium">Allow Motion Sensors</h3>
+              <p className="text-sm text-slate-300">
+                Motion and orientation sensors help determine which direction
+                you're facing for accurate navigation.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/70 p-4 rounded-lg flex items-start">
+            <div className="bg-green-500/20 p-2 rounded-full mr-3 mt-1">
+              <Navigation className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <h3 className="font-medium">Follow the Arrows</h3>
+              <p className="text-sm text-slate-300">
+                Hold your phone upright and follow the direction of the arrows
+                to navigate to safety.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/70 p-4 rounded-lg flex items-start">
+            <div className="bg-amber-500/20 p-2 rounded-full mr-3 mt-1">
+              <Target className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <h3 className="font-medium">Reach All Waypoints</h3>
+              <p className="text-sm text-slate-300">
+                Follow the path through each waypoint until you reach a safe
+                area away from danger.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 w-full max-w-md">
+          <Button
+            onClick={handleStartAR}
+            className="w-full bg-red-600 hover:bg-red-700"
+            size="lg"
+          >
+            <Navigation className="mr-2 h-5 w-5" />
+            Start AR Navigation
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Permission prompt for iOS devices
+  if (showPermissionPrompt) {
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 bg-black text-white">
+        <Compass className="h-16 w-16 text-blue-500 mb-6" />
+        <h2 className="text-xl font-bold mb-3 text-center">
+          Sensor Access Required
+        </h2>
+        <p className="text-center mb-6 max-w-md">
+          AR navigation requires access to your device's orientation sensors to
+          show directional guidance. iOS requires explicit permission for these
+          sensors.
+        </p>
+        <Button
+          onClick={requestOrientationPermission}
+          className="bg-blue-600 hover:bg-blue-700 text-white mb-3"
+          size="lg"
+        >
+          Allow Motion & Orientation Access
+        </Button>
+        <Button
+          onClick={() => {
+            setUseFallbackMode(true);
+            setShowPermissionPrompt(false);
+          }}
+          variant="outline"
+          className="border-white/30 text-white"
+        >
+          Continue in Basic Mode
+        </Button>
+      </div>
+    );
+  }
 
   // Browser compatibility check
   if (incompatibleBrowser) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center p-4">
-        <AlertTriangle className="mb-4 h-12 w-12 text-amber-500" />
-        <p className="text-center text-lg font-medium">Browser Not Supported</p>
-        <p className="mb-6 text-center text-sm text-muted-foreground">
-          Your browser doesn't support the camera features needed for AR
-          navigation. Please try using a modern browser like Chrome, Safari, or
-          Firefox.
+      <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 bg-black text-white">
+        <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2 text-center">
+          Browser Not Supported
+        </h2>
+        <p className="text-center mb-6 max-w-md">
+          Your browser doesn't support all the features needed for AR
+          navigation. For the best experience, please use Safari (iOS) or Chrome
+          (Android).
         </p>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={() => {
               setIncompatibleBrowser(false);
@@ -289,9 +661,13 @@ export function ARSafetyNavigator({
             }}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
-            Use Fallback Mode
+            Use Basic Navigation Mode
           </Button>
-          <Button onClick={onClose} variant="outline">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="border-white/30 text-white"
+          >
             Return to Dashboard
           </Button>
         </div>
@@ -302,15 +678,15 @@ export function ARSafetyNavigator({
   // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center p-4">
-        <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-red-500 border-t-transparent"></div>
-        <p className="text-center text-lg font-medium">
+      <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 bg-black text-white">
+        <div className="h-16 w-16 rounded-full border-4 border-t-transparent border-red-500 animate-spin mb-6"></div>
+        <h2 className="text-xl font-bold mb-2 text-center">
           Initializing AR Navigator...
-        </p>
-        <p className="mt-2 text-center text-sm text-muted-foreground">
+        </h2>
+        <p className="text-center text-sm text-slate-300 mb-1">
           Please allow camera access when prompted
         </p>
-        <p className="mt-4 max-w-xs text-center text-xs text-muted-foreground">
+        <p className="text-center max-w-xs text-xs text-slate-400">
           This may take a moment. Make sure your camera is not being used by
           another application.
         </p>
@@ -321,20 +697,21 @@ export function ARSafetyNavigator({
   // Error state
   if (error) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center p-4">
-        <AlertTriangle className="mb-4 h-12 w-12 text-red-500" />
-        <p className="text-center text-lg font-medium text-red-600">{error}</p>
-        <p className="mb-6 text-center text-sm text-muted-foreground">
-          AR navigation requires camera access to function properly.
+      <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 bg-black text-white">
+        <AlertTriangle className="h-16 w-16 text-red-500 mb-6" />
+        <h2 className="text-xl font-bold mb-2 text-center text-red-500">
+          {error}
+        </h2>
+        <p className="text-center mb-6 max-w-md text-slate-300">
+          AR navigation requires camera access to function properly. Please
+          check your browser settings and try again.
         </p>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={() => {
-              // Reset states and try again
               setError(null);
               setLoading(true);
               setHasPermission(null);
-              window.location.reload();
             }}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
@@ -347,9 +724,13 @@ export function ARSafetyNavigator({
             }}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
-            Use Fallback Mode
+            Use Basic Mode
           </Button>
-          <Button onClick={onClose} variant="outline">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="border-white/30 text-white"
+          >
             Return to Dashboard
           </Button>
         </div>
@@ -360,16 +741,16 @@ export function ARSafetyNavigator({
   // Camera permission denied
   if (hasPermission === false) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center p-4">
-        <AlertTriangle className="mb-4 h-12 w-12 text-amber-500" />
-        <p className="text-center text-lg font-medium">
-          Camera access required
-        </p>
-        <p className="mb-6 text-center text-sm text-muted-foreground">
+      <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 bg-black text-white">
+        <Camera className="h-16 w-16 text-amber-500 mb-6" />
+        <h2 className="text-xl font-bold mb-2 text-center">
+          Camera Access Required
+        </h2>
+        <p className="text-center mb-6 max-w-md">
           Please enable camera permissions in your browser settings to use the
           AR navigation feature.
         </p>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={() => {
               setHasPermission(null);
@@ -377,9 +758,13 @@ export function ARSafetyNavigator({
             }}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
-            Use Fallback Mode
+            Use Basic Mode
           </Button>
-          <Button onClick={onClose} variant="outline">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="border-white/30 text-white"
+          >
             Return to Dashboard
           </Button>
         </div>
@@ -390,24 +775,39 @@ export function ARSafetyNavigator({
   // Orientation permission denied (iOS)
   if (hasOrientationPermission === false) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center p-4">
-        <Compass className="mb-4 h-12 w-12 text-blue-500" />
-        <p className="text-center text-lg font-medium">
-          Orientation access required
-        </p>
-        <p className="mb-6 text-center text-sm text-muted-foreground">
+      <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 bg-black text-white">
+        <Compass className="h-16 w-16 text-blue-500 mb-6" />
+        <h2 className="text-xl font-bold mb-2 text-center">
+          Orientation Access Required
+        </h2>
+        <p className="text-center mb-6 max-w-md">
           AR navigation requires access to your device's orientation sensors to
           show directional guidance.
         </p>
-        <Button
-          onClick={requestOrientationPermission}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          Allow Device Orientation
-        </Button>
-        <Button onClick={onClose} variant="outline" className="mt-2">
-          Return to Dashboard
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            onClick={requestOrientationPermission}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Allow Device Orientation
+          </Button>
+          <Button
+            onClick={() => {
+              setHasOrientationPermission(true);
+              setUseFallbackMode(true);
+            }}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            Use Basic Mode
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="border-white/30 text-white"
+          >
+            Return to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
@@ -419,7 +819,7 @@ export function ARSafetyNavigator({
         {/* Static Directional Guidance */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <p className="text-white mb-4 text-lg font-medium">
-            Static Navigation Mode
+            Basic Navigation Mode
           </p>
 
           {/* Direction Arrow */}
@@ -464,10 +864,19 @@ export function ARSafetyNavigator({
               <span className="font-medium">{distance}</span> from hazard
             </div>
           </div>
+
+          {/* Progress Bar */}
+          <div className="mt-3 mb-1">
+            <div className="flex justify-between items-center text-xs mb-1">
+              <span>Evacuation Progress</span>
+              <span>{Math.round(evacuationProgress)}%</span>
+            </div>
+            <Progress value={evacuationProgress} className="h-2" />
+          </div>
         </div>
 
         {/* Exit Button */}
-        <div className="absolute right-4 top-14 z-10">
+        <div className="absolute right-4 top-4 z-10">
           <Button
             variant="outline"
             size="sm"
@@ -476,6 +885,19 @@ export function ARSafetyNavigator({
           >
             <Map className="mr-2 h-4 w-4" />
             Exit Navigation
+          </Button>
+        </div>
+
+        {/* Action buttons */}
+        <div className="absolute right-4 top-14 z-10 flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCalibrate}
+            className="bg-black/50 text-white hover:bg-black/70 border-white/30"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Recalibrate
           </Button>
         </div>
       </div>
@@ -491,18 +913,13 @@ export function ARSafetyNavigator({
         autoPlay
         playsInline
         muted
-        style={{ display: "none" }}
-        onCanPlay={() => {
-          console.log("Video can play now");
-          setLoading(false);
-        }}
-        onError={(e) => {
-          console.error("Video error:", e);
-          setError("Failed to start camera stream");
-          setHasPermission(false);
-          setLoading(false);
-        }}
         className="h-full w-full object-cover"
+      />
+
+      {/* Canvas overlay for AR elements */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
       {/* Calibration Overlay */}
@@ -518,45 +935,47 @@ export function ARSafetyNavigator({
         </div>
       )}
 
-      {/* AR Overlay with enhanced UI */}
+      {/* AR Overlay */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Direction Arrow */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
             animate={{ rotate: arrowRotation }}
             transition={{ type: "spring", stiffness: 100 }}
-            className="relative z-10"
+            className="relative"
           >
             <ArrowUpCircle className="h-32 w-32 text-red-500 drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
           </motion.div>
 
           {/* Waypoint reached notification */}
-          {showWaypointReached && (
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.5, opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="absolute top-1/3 left-0 right-0 text-center"
-            >
-              <div className="bg-green-500/80 mx-auto py-2 px-4 rounded-lg inline-flex items-center">
-                <div className="mr-2 h-5 w-5 text-white">✓</div>
-                <span className="text-white font-medium">
-                  Waypoint reached!
-                </span>
-              </div>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {showWaypointReached && (
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.5, opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute top-1/3 left-0 right-0 text-center"
+              >
+                <div className="bg-green-500/80 mx-auto py-2 px-4 rounded-lg inline-flex items-center">
+                  <CheckCircle className="mr-2 h-5 w-5 text-white" />
+                  <span className="text-white font-medium">
+                    Waypoint reached!
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Waypoints visualization */}
-        {showDirections && (
+        {showDirections && waypoints.length > 0 && (
           <div className="absolute left-0 right-0 top-1/2 flex justify-center items-center">
             <div className="relative h-1 bg-white/20 w-3/4 rounded-full overflow-hidden">
               {waypoints.map((waypoint, index) => (
                 <div
                   key={waypoint.id}
-                  className={`absolute w-6 h-6 -mt-2.5 rounded-full flex items-center justify-center transition-colors
+                  className={`absolute w-6 h-6 -mt-2.5 rounded-full flex items-center justify-center
                     ${
                       index === currentWaypoint
                         ? "bg-blue-500 border-2 border-white"
@@ -564,7 +983,9 @@ export function ARSafetyNavigator({
                         ? "bg-green-500"
                         : "bg-white/50"
                     }`}
-                  style={{ left: `${(index / (waypoints.length - 1)) * 100}%` }}
+                  style={{
+                    left: `${(index / (waypoints.length - 1)) * 100}%`,
+                  }}
                 >
                   {index === currentWaypoint && (
                     <div className="absolute w-10 h-10 rounded-full border-2 border-blue-400 animate-ping"></div>
@@ -579,7 +1000,7 @@ export function ARSafetyNavigator({
         )}
 
         {/* Disaster Info */}
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 text-white z-10">
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <AlertTriangle className="mr-2 h-5 w-5 text-red-500" />
@@ -602,43 +1023,31 @@ export function ARSafetyNavigator({
           </div>
         </div>
 
-        {/* Safety Instructions with Enhanced UI */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white z-10">
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-lg font-bold">EVACUATION ROUTE</p>
-            <div className="rounded-full bg-white/20 px-2 py-1 text-sm flex items-center">
-              <Target className="mr-1 h-3.5 w-3.5" />
+        {/* Safety Instructions */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
+          <p className="mb-1 text-lg font-bold">EVACUATION ROUTE</p>
+          <div className="flex justify-between items-center">
+            <p className="text-sm">
+              Current Waypoint: {currentWaypoint + 1} of {waypoints.length}
+            </p>
+            <div className="rounded-full bg-white/20 px-2 py-1 text-sm">
               <span className="font-medium">{distance}</span> from hazard
             </div>
           </div>
 
-          <div className="mb-3">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-white/70">Evacuation Progress</span>
-              <span className="text-xs font-medium">
-                {Math.round(evacuationProgress)}%
-              </span>
+          {/* Progress Bar */}
+          <div className="mt-3 mb-1">
+            <div className="flex justify-between items-center text-xs mb-1">
+              <span>Evacuation Progress</span>
+              <span>{Math.round(evacuationProgress)}%</span>
             </div>
             <Progress value={evacuationProgress} className="h-2" />
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="text-sm">
-              <span className="font-medium">Current Waypoint: </span>
-              <span>
-                {currentWaypoint + 1} of {waypoints.length}
-              </span>
-            </div>
-            <div className="text-sm">
-              <span className="font-medium">Next: </span>
-              <span>{waypoints[currentWaypoint]?.distance.toFixed(0)}m</span>
-            </div>
           </div>
         </div>
       </div>
 
       {/* Action buttons */}
-      <div className="absolute right-4 top-14 z-10 flex flex-col gap-2 pointer-events-auto">
+      <div className="absolute right-4 top-4 z-10 flex flex-col gap-2 pointer-events-auto">
         <Button
           variant="outline"
           size="sm"
